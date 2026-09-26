@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova AI Image Generator</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: #050812;
+  color: white;
+  display: flex;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  background: #1261ff;
+  filter: blur(180px);
+  opacity: .18;
+  top: -150px;
+  left: -100px;
+  z-index: -1;
+}
+
+.app {
+  width: 100%;
+  max-width: 900px;
+  padding: 25px 18px 50px;
+}
+
+.logo {
+  text-align: center;
+  margin-top: 25px;
+  margin-bottom: 45px;
+}
+
+.logo-icon {
+  width: 65px;
+  height: 65px;
+  margin: auto;
+  border-radius: 20px;
+  background: linear-gradient(135deg,#1683ff,#663cff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 0 35px rgba(50,100,255,.5);
+}
+
+.logo h1 {
+  margin-top: 15px;
+  font-size: 27px;
+}
+
+.logo p {
+  color: #8994aa;
+  margin-top: 8px;
+}
+
+.generator {
+  background: rgba(12,18,32,.85);
+  border: 1px solid #202b42;
+  border-radius: 25px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  border: 1px solid #26334d;
+  outline: none;
+  border-radius: 18px;
+  padding: 18px;
+  background: #080e1b;
+  color: white;
+  font-size: 16px;
+}
+
+textarea:focus {
+  border-color: #317cff;
+  box-shadow: 0 0 20px rgba(49,124,255,.15);
+}
+
+.options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+
+.option {
+  background: #0b1220;
+  color: #aab4c7;
+  border: 1px solid #26334d;
+  padding: 10px 15px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.option.active {
+  color: white;
+  border-color: #317cff;
+  background: #102653;
+}
+
+.generate {
+  width: 100%;
+  border: none;
+  padding: 16px;
+  border-radius: 15px;
+  color: white;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  background: linear-gradient(90deg,#1677ff,#673cff);
+  box-shadow: 0 8px 25px rgba(49,105,255,.3);
+}
+
+.generate:active {
+  transform: scale(.98);
+}
+
+.status {
+  text-align: center;
+  color: #8994aa;
+  margin: 20px 0;
+  display: none;
+}
+
+.loader {
+  width: 35px;
+  height: 35px;
+  border: 4px solid #25334e;
+  border-top-color: #3985ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: auto auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.result {
+  margin-top: 25px;
+  display: none;
+}
+
+.result img {
+  width: 100%;
+  border-radius: 20px;
+  display: block;
+  border: 1px solid #26334d;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1px solid #26334d;
+  background: #0c1424;
+  color: white;
+  cursor: pointer;
+}
+
+.error {
+  color: #ff7b7b;
+  text-align: center;
+  margin-top: 15px;
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="logo">
+    <div class="logo-icon">✦</div>
+    <h1>Nova AI</h1>
+    <p>Create images with AI</p>
+  </div>
+
+  <div class="generator">
+
+    <textarea id="prompt"
+      placeholder="Describe the image you want...&#10;&#10;Example: A futuristic city on Mars at sunset, cinematic, ultra detailed"></textarea>
+
+    <div class="options">
+      <button class="option active" onclick="selectStyle(this,'')">Original</button>
+      <button class="option" onclick="selectStyle(this,', cinematic style')">Cinematic</button>
+      <button class="option" onclick="selectStyle(this,', anime style')">Anime</button>
+      <button class="option" onclick="selectStyle(this,', photorealistic')">Realistic</button>
+      <button class="option" onclick="selectStyle(this,', 3D render')">3D</button>
+    </div>
+
+    <button class="generate" onclick="generateImage()">
+      ✨ Generate Image
+    </button>
+
+    <div class="status" id="status">
+      <div class="loader"></div>
+      Creating your image...
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <div class="result" id="result">
+      <img id="generatedImage" src="" alt="Generated AI Image">
+
+      <div class="actions">
+        <button onclick="downloadImage()">⬇ Download</button>
+        <button onclick="generateImage()">↻ Generate Again</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+let selectedStyle = "";
+
+function selectStyle(button, style) {
+
+  document.querySelectorAll(".option")
+    .forEach(btn => btn.classList.remove("active"));
+
+  button.classList.add("active");
+
+  selectedStyle = style;
+}
+
+async function generateImage() {
+
+  const promptBox = document.getElementById("prompt");
+  const prompt = promptBox.value.trim();
+
+  const status = document.getElementById("status");
+  const result = document.getElementById("result");
+  const error = document.getElementById("error");
+  const image = document.getElementById("generatedImage");
+
+  if (!prompt) {
+    error.innerText = "Please enter a prompt first.";
+    error.style.display = "block";
+    return;
+  }
+
+  error.style.display = "none";
+  result.style.display = "none";
+  status.style.display = "block";
+
+  try {
+
+    /*
+      IMPORTANT:
+      Replace YOUR_BACKEND_URL with your real backend URL.
+
+      Example:
+      https://your-project.vercel.app/api/generate
+    */
+
+    const response = await fetch(
+      "YOUR_BACKEND_URL/api/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: prompt + selectedStyle
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Image generation failed.");
+    }
+
+    /*
+      Backend should return:
+
+      {
+        "image": "data:image/png;base64,..."
+      }
+    */
+
+    image.src = data.image;
+
+    result.style.display = "block";
+
+  } catch (err) {
+
+    error.innerText =
+      err.message || "Something went wrong.";
+
+    error.style.display = "block";
+
+  } finally {
+
+    status.style.display = "none";
+  }
+}
+
+function downloadImage() {
+
+  const image = document.getElementById("generatedImage");
+
+  if (!image.src) return;
+
+  const link = document.createElement("a");
+
+  link.href = image.src;
+  link.download = "nova-ai-image.png";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+</script>
+
+</body>
+</html>
