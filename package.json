@@ -1,0 +1,8 @@
+{
+  "name": "nova-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "openai": "^6.16.0"
+  }
+}
